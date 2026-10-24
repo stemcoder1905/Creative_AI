@@ -4,7 +4,7 @@ import { z } from 'zod';
 import { supabase } from '@/lib/supabase';
 import { buildPrompt } from '@/services/promptEngine';
 import { generateImage } from '@/services/imageGeneration';
-import { DesignBrief, Profile } from '@/types';
+import { DesignBrief } from '@/types';
 
 function getSessionUser(request: Request): { email: string; userId: string } | null {
   const cookie = request.headers.get('cookie') ?? '';
@@ -18,7 +18,6 @@ function getSessionUser(request: Request): { email: string; userId: string } | n
   }
 }
 
-// Zod schema for the incoming design request
 const designSchema = z.object({
   topic: z.string().min(1),
   designType: z.string().min(1),
@@ -33,13 +32,11 @@ const designSchema = z.object({
 });
 
 export async function POST(request: Request) {
-  // 1️⃣ Authenticate user
   const session = getSessionUser(request);
   if (!session?.email) {
     return NextResponse.json({ error: 'Unauthenticated. Please log in.' }, { status: 401 });
   }
 
-  // 2️⃣ Parse and validate payload
   let payload: any;
   try {
     payload = await request.json();
@@ -52,7 +49,6 @@ export async function POST(request: Request) {
   }
   const brief = parseResult.data as DesignBrief;
 
-  // 3️⃣ Load user's profile (brand kit)
   let { data: profile } = await supabase
     .from('profiles')
     .select('*')
@@ -60,16 +56,9 @@ export async function POST(request: Request) {
     .single();
 
   if (!profile) {
-    // Create baseline profile if not present
-    const { data: newProf } = await supabase
-      .from('profiles')
-      .insert({ email: session.email, full_name: session.email.split('@')[0] })
-      .select()
-      .single();
-    profile = newProf || { email: session.email, id: session.userId };
+    profile = { email: session.email, id: session.userId };
   }
 
-  // 4️⃣ Credit check and deduction
   const COST_PER_GEN = Number(process.env.CREDIT_COST_PER_GENERATION ?? '5');
   let creditRecord = { id: 'temp', total_credits: 25, used_credits: 0 };
   const { data: foundCredits } = await supabase
@@ -80,37 +69,15 @@ export async function POST(request: Request) {
 
   if (foundCredits) {
     creditRecord = foundCredits;
-  } else {
-    // Initialize starter credits if missing
-    const { data: newCredit } = await supabase
-      .from('credits')
-      .insert({
-        profile_id: profile.id,
-        auth_user_id: profile.id,
-        total_credits: 25,
-        used_credits: 0,
-      })
-      .select()
-      .single();
-    if (newCredit) creditRecord = newCredit;
   }
 
   const remaining = creditRecord.total_credits - creditRecord.used_credits;
   if (remaining < COST_PER_GEN) {
     return NextResponse.json({
-      error: `Insufficient credits. You need ${COST_PER_GEN} credits, but have ${remaining} left. Please upgrade your plan.`,
+      error: `Insufficient credits. You need ${COST_PER_GEN} credits, but have ${remaining} left.`,
     }, { status: 402 });
   }
 
-  // Deduct credits optimistically
-  if (creditRecord.id !== 'temp') {
-    await supabase
-      .from('credits')
-      .update({ used_credits: creditRecord.used_credits + COST_PER_GEN })
-      .eq('id', creditRecord.id);
-  }
-
-  // 5️⃣ Build prompt and generate image
   const promptText = buildPrompt(brief, profile);
   const dimensionsMap: Record<string, [number, number]> = {
     instagram_square: [1080, 1080],
@@ -130,20 +97,21 @@ export async function POST(request: Request) {
   try {
     imageUrl = await generateImage(promptText, width, height);
   } catch (e: any) {
-    // Refund credits on failure
-    if (creditRecord.id !== 'temp') {
-      await supabase
-        .from('credits')
-        .update({ used_credits: creditRecord.used_credits })
-        .eq('id', creditRecord.id);
-    }
+    console.error('[Generate Design Route Error]:', e);
+    // Return the EXACT error message directly so user can see what OpenAI reported
     return NextResponse.json({
-      error: 'Image generation failed',
-      details: e.message || 'Please verify your OPENAI_API_KEY has active quota or credits.',
+      error: e.message || 'Image generation failed',
     }, { status: 502 });
   }
 
-  // 6️⃣ Persist design metadata
+  // Deduct credits only on success
+  if (creditRecord.id !== 'temp') {
+    await supabase
+      .from('credits')
+      .update({ used_credits: creditRecord.used_credits + COST_PER_GEN })
+      .eq('id', creditRecord.id);
+  }
+
   const { data: designRecord } = await supabase
     .from('designs')
     .insert({

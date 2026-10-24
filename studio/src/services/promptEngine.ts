@@ -1,39 +1,37 @@
 // src/services/promptEngine.ts
-/**
- * Prompt engineering service – builds a detailed image generation prompt
- * based on user input and the stored profile/brand information.
- *
- * In a production system this would be far more sophisticated (LLM assisted,
- * localization, style weighting, etc.). For the initial vertical slice we
- * create a deterministic template that concatenates the relevant fields.
- */
-import { Profile } from '@/types';
-
-export interface DesignBrief {
-  profession: string;
-  businessName: string;
-  topic: string;
-  designType: string;
-  platform: string;
-  style: string;
-  language?: string;
-  colorPalette?: string;
-  logoUrl?: string;
-}
+import { DesignBrief, Profile } from '@/types';
 
 /**
- * Build a prompt string for the image‑generation provider.
+ * Transforms user briefs into rich, highly detailed, visually stunning prompts
+ * with explicit rendering of festive elements, typography, and vibrant backgrounds.
  */
 export function buildPrompt(brief: DesignBrief, profile: Profile): string {
-  const lines: string[] = [];
-  lines.push(`Create a ${brief.designType} for ${brief.businessName} (${brief.profession}).`);
-  if (brief.topic) lines.push(`Topic / message: ${brief.topic}.`);
-  lines.push(`Target platform: ${brief.platform} (recommended dimensions).`);
-  lines.push(`Visual style: ${brief.style}.`);
-  if (brief.language) lines.push(`Language: ${brief.language}.`);
-  if (brief.colorPalette) lines.push(`Preferred colors: ${brief.colorPalette}.`);
-  if (profile.brandColors) lines.push(`Brand colors: ${profile.brandColors.join(', ')}.`);
-  if (brief.logoUrl) lines.push(`Include logo from ${brief.logoUrl}.`);
-  lines.push(`Maintain space for headline and call‑to‑action text.`);
-  return lines.join(' ');
+  const brandName = profile.business_name || profile.full_name || '';
+  const profession = profile.profession || '';
+  const brandPalette = profile.brand_colors ?? profile.brandColors ?? null;
+  const colors = brief.colorPalette ||
+    (Array.isArray(brandPalette) ? brandPalette.join(', ') : brandPalette) ||
+    'golden warm glow, festive deep amber, radiant purple';
+
+  const userTopic = brief.topic.trim();
+  const headline = brief.headline ? `Featured bold typographic headline: "${brief.headline}".` : '';
+  const cta = brief.cta ? `Call to action text ribbon: "${brief.cta}".` : '';
+
+  let sceneDetails = '';
+
+  if (brief.designType === 'Motivational Quote') {
+    sceneDetails = `An inspiring motivational poster about "${userTopic}". Inspiring positive quote about inner light conquering darkness, radiant glowing oil lamps (diyas), spiritual golden sparks, blooming marigold flowers, elegant Hindi/English calligraphy typography, festive celebration atmosphere.`;
+  } else if (brief.designType === 'Festival & Holiday Greeting') {
+    sceneDetails = `A glorious festive celebration greeting poster for "${userTopic}". Decorated clay diyas glowing warmly with golden flames, intricate colorful rangoli patterns, floating golden sparkles and fireworks in night sky, warm celebratory ambiance, festive greeting poster.`;
+  } else if (brief.designType === 'Special Offer & Discount Ad') {
+    sceneDetails = `Eye-catching promotional discount advertising banner for "${userTopic}". Bold 3D typography showing discount offer, glowing festive ornaments, high-energy modern sale banner, commercial product placement pedestal.`;
+  } else if (brief.designType === 'Product Showcase') {
+    sceneDetails = `Commercial luxury product display poster for "${userTopic}". Pristine marble display podium surrounded by festive golden lights, delicate flowers, studio reflection lighting, high-end catalog presentation.`;
+  } else {
+    sceneDetails = `Commercial social media banner and poster for "${userTopic}". ${profession ? `Tailored for ${profession}.` : ''} Professional marketing layout, bold visual focal point, artistic festival motifs, warm lighting.`;
+  }
+
+  const prompt = `${sceneDetails} ${headline} ${cta} Visual Style: ${brief.style}, hyper-detailed graphic design, commercial social media poster for ${brief.platform.replace('_', ' ')}, vibrant harmonious color palette (${colors}), ultra-high resolution 8k, award-winning poster design, clean artistic presentation.`;
+
+  return prompt;
 }

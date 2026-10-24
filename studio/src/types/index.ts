@@ -15,13 +15,14 @@ export interface Profile {
   country?: string | null;
   website?: string | null;
   social_links?: Record<string, string> | null;
-  brandColors?: string[]; // optional array of hex colors
+  brandColors?: string[] | string | null;
+  brand_colors?: string[] | string | null;
   // Extend with more branding fields as needed
 }
 
 export interface DesignBrief {
-  profession: string;
-  businessName: string;
+  profession?: string;
+  businessName?: string;
   topic: string;
   designType: string;
   platform: string;
@@ -29,4 +30,7 @@ export interface DesignBrief {
   language?: string;
   colorPalette?: string;
   logoUrl?: string;
+  headline?: string;
+  cta?: string;
+  contactInfo?: string;
 }

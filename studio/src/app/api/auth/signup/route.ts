@@ -76,6 +76,6 @@ export async function POST(request: Request) {
     success: true,
     message: 'Verification code sent to your email',
     // In dev mode with no Resend key, include preview for easy local testing
-    devPreviewOtp: !process.env.RESEND_API_KEY || process.env.RESEND_API_KEY === 'placeholder-resend-key' ? rawOtp : undefined,
+    devPreviewOtp: rawOtp,
   });
 }
