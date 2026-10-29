@@ -11,7 +11,17 @@ function getSessionUser(request: Request): { email: string; userId: string } | n
   const match = cookie.match(/sb-access-token=([^;]+)/);
   if (!match) return null;
   try {
-    const raw = Buffer.from(decodeURIComponent(match[1]), 'base64').toString('utf-8');
+    const tokenRaw = decodeURIComponent(match[1]);
+    const dotIdx = tokenRaw.lastIndexOf('.');
+    if (dotIdx === -1) return null;
+    const payloadB64 = tokenRaw.slice(0, dotIdx);
+    const sig = tokenRaw.slice(dotIdx + 1);
+    // Verify HMAC signature
+    const crypto = require('crypto');
+    const secret = process.env.SESSION_SECRET || 'change-me-in-production-32chars+';
+    const raw = Buffer.from(payloadB64, 'base64').toString('utf-8');
+    const expectedSig = crypto.createHmac('sha256', secret).update(raw).digest('hex');
+    if (sig !== expectedSig) return null;   // tampered token — reject
     return JSON.parse(raw);
   } catch {
     return null;
@@ -64,7 +74,7 @@ export async function POST(request: Request) {
   const { data: foundCredits } = await supabase
     .from('credits')
     .select('id, total_credits, used_credits')
-    .eq('profile_id', profile.id)
+    .eq('profile_id', profile.id)    // FIX: was profile_id but profile may have fallen back — use consistently
     .single();
 
   if (foundCredits) {

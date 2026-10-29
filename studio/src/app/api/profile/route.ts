@@ -7,7 +7,16 @@ function getSessionUser(request: Request): { email: string; userId: string } | n
   const match = cookie.match(/sb-access-token=([^;]+)/);
   if (!match) return null;
   try {
-    const raw = Buffer.from(decodeURIComponent(match[1]), 'base64').toString('utf-8');
+    const tokenRaw = decodeURIComponent(match[1]);
+    const dotIdx = tokenRaw.lastIndexOf('.');
+    if (dotIdx === -1) return null;
+    const payloadB64 = tokenRaw.slice(0, dotIdx);
+    const sig = tokenRaw.slice(dotIdx + 1);
+    const crypto = require('crypto');
+    const secret = process.env.SESSION_SECRET || 'change-me-in-production-32chars+';
+    const raw = Buffer.from(payloadB64, 'base64').toString('utf-8');
+    const expectedSig = crypto.createHmac('sha256', secret).update(raw).digest('hex');
+    if (sig !== expectedSig) return null;  // tampered — reject
     return JSON.parse(raw);
   } catch {
     return null;
@@ -29,7 +38,7 @@ export async function GET(request: Request) {
   const { data: credit } = await supabase
     .from('credits')
     .select('*')
-    .eq('email', session.email)
+    .eq('profile_id', profile?.id ?? session.userId)  // FIX: was querying by email (not a credits column)
     .single();
 
   return NextResponse.json({

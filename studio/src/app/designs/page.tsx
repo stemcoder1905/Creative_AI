@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import Link from 'next/link'
-import { Sparkles, ArrowLeft, Download, PlusCircle, Image as ImageIcon } from 'lucide-react'
+import { Sparkles, ArrowLeft, Download, PlusCircle, Image as ImageIcon, Share2 } from 'lucide-react'
 
 export default function DesignsVaultPage() {
   const [designs, setDesigns] = useState<any[]>([])
@@ -98,19 +98,27 @@ export default function DesignsVaultPage() {
                     </p>
                   </div>
                   <div className="pt-3 mt-3 border-t border-slate-800/80 flex items-center justify-between">
-                    <span className="text-[11px] text-slate-500">
-                      {new Date(design.created_at).toLocaleDateString()}
-                    </span>
-                    <a
-                      href={design.image_path}
-                      download={`creative_${design.id}.png`}
-                      target="_blank"
-                      rel="noreferrer"
-                      className="inline-flex items-center gap-1 text-xs text-indigo-400 hover:text-indigo-300 font-medium"
-                    >
-                      <Download className="w-3.5 h-3.5" /> Download
-                    </a>
-                  </div>
+                      <span className="text-[11px] text-slate-500">
+                        {new Date(design.created_at).toLocaleDateString()}
+                      </span>
+                      <div className="flex items-center gap-2">
+                        <Link
+                          href={`/social/publish/${design.id}`}
+                          className="inline-flex items-center gap-1 text-xs text-indigo-400 hover:text-indigo-300 font-medium"
+                        >
+                          <Share2 className="w-3.5 h-3.5" /> Publish
+                        </Link>
+                        <a
+                          href={design.image_path}
+                          download={`creative_${design.id}.png`}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="inline-flex items-center gap-1 text-xs text-slate-400 hover:text-slate-300 font-medium"
+                        >
+                          <Download className="w-3.5 h-3.5" /> Download
+                        </a>
+                      </div>
+                    </div>
                 </div>
               </div>
             ))}

@@ -14,6 +14,7 @@ import {
   ArrowRight,
   TrendingUp,
   Download,
+  Share2,
 } from 'lucide-react'
 
 export default function DashboardPage() {
@@ -94,6 +95,13 @@ export default function DashboardPage() {
             >
               <Palette className="w-4 h-4" />
               <span>Brand Kit & Profile</span>
+            </Link>
+            <Link
+              href="/social"
+              className="flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-slate-400 hover:text-white hover:bg-slate-800/60 font-medium text-sm transition"
+            >
+              <Share2 className="w-4 h-4" />
+              <span>Social Publishing</span>
             </Link>
           </nav>
         </div>

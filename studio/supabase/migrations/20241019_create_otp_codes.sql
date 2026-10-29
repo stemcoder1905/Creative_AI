@@ -4,7 +4,7 @@ CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 CREATE TABLE public.otp_codes (
   id uuid PRIMARY KEY DEFAULT uuid_generate_v4(),
   email text NOT NULL,
-  code_hash text NOT NULL,
+  otp_hash text NOT NULL,          -- FIX: was "code_hash", API uses "otp_hash"
   expires_at timestamptz NOT NULL,
   attempts int NOT NULL DEFAULT 0,
   created_at timestamptz NOT NULL DEFAULT now()

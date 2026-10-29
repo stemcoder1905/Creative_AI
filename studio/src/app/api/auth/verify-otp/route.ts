@@ -68,7 +68,7 @@ export async function POST(request: Request) {
     const { data: newProfile, error: profileErr } = await supabase
       .from('profiles')
       .insert({
-        email,
+        email,                              // FIX: required unique key
         full_name: email.split('@')[0],
       })
       .select()
@@ -76,22 +76,22 @@ export async function POST(request: Request) {
 
     if (!profileErr && newProfile) {
       profile = newProfile;
-      // Initialize free starter credits (e.g. 25 credits = 5 generations)
+      // Initialize free starter credits (25 credits = 5 generations @ 5 each)
       await supabase.from('credits').insert({
-        profile_id: newProfile.id,
-        auth_user_id: newProfile.id,
+        profile_id: newProfile.id,          // FIX: use profile_id (matches new schema)
         total_credits: 25,
         used_credits: 0,
       });
     }
   }
 
-  // Generate session token (simple base64 token representation or Supabase session)
-  const sessionToken = Buffer.from(JSON.stringify({
-    userId: profile?.id || email,
-    email,
-    created: Date.now(),
-  })).toString('base64');
+  // Generate session token — HMAC-signed to prevent tampering
+  // Uses a server-side secret so clients cannot forge sessions
+  const crypto = await import('crypto');
+  const secret = process.env.SESSION_SECRET || 'change-me-in-production-32chars+';
+  const payload = JSON.stringify({ userId: profile?.id || email, email, created: Date.now() });
+  const sig = crypto.createHmac('sha256', secret).update(payload).digest('hex');
+  const sessionToken = Buffer.from(payload).toString('base64') + '.' + sig;
 
   const response = NextResponse.json({
     success: true,

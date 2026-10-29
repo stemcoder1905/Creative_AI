@@ -72,10 +72,16 @@ export async function POST(request: Request) {
     console.log(`\n========================================\n[DEV OTP] Email: ${email} | Code: ${rawOtp}\n========================================\n`);
   }
 
+  // Always log to server console so you can see OTP in terminal
+  console.log(`\n╔══════════════════════════════════════╗`);
+  console.log(`║  OTP for ${email}`);
+  console.log(`║  Code: ${rawOtp}`);
+  console.log(`╚══════════════════════════════════════╝\n`);
+
   return NextResponse.json({
     success: true,
-    message: 'Verification code sent to your email',
-    // In dev mode with no Resend key, include preview for easy local testing
+    message: 'Verification code sent',
+    // Show OTP on screen until a custom email domain is verified in Resend
     devPreviewOtp: rawOtp,
   });
 }
