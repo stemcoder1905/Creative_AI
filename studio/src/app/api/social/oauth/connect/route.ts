@@ -28,7 +28,7 @@ export async function GET(request: Request) {
 
   let authUrl: string;
 
-  if (platform === 'facebook' || platform === 'instagram') {
+  if (platform === 'facebook') {
     const metaAppId = process.env.META_APP_ID;
     if (!metaAppId) {
       return NextResponse.json(
@@ -36,15 +36,19 @@ export async function GET(request: Request) {
         { status: 503 }
       );
     }
-    // Permissions: pages_manage_posts for Facebook, instagram_content_publish for Instagram
-    const scopes = [
-      'pages_show_list',
-      'pages_manage_posts',
-      'pages_read_engagement',
-      'instagram_basic',
-      'instagram_content_publish',
-      'business_management',
-    ].join(',');
+    // Pure Facebook Page publishing permissions
+    const scopes = ['pages_show_list', 'pages_manage_posts', 'pages_read_engagement'].join(',');
+    authUrl = `https://www.facebook.com/v19.0/dialog/oauth?client_id=${metaAppId}&redirect_uri=${encodeURIComponent(CALLBACK_URL)}&scope=${encodeURIComponent(scopes)}&state=${state}&response_type=code`;
+  } else if (platform === 'instagram') {
+    const metaAppId = process.env.META_APP_ID;
+    if (!metaAppId) {
+      return NextResponse.json(
+        { error: 'META_APP_ID not configured. See .env.example.' },
+        { status: 503 }
+      );
+    }
+    // Instagram Professional publishing permissions
+    const scopes = ['instagram_basic', 'instagram_content_publish', 'pages_show_list', 'pages_read_engagement'].join(',');
     authUrl = `https://www.facebook.com/v19.0/dialog/oauth?client_id=${metaAppId}&redirect_uri=${encodeURIComponent(CALLBACK_URL)}&scope=${encodeURIComponent(scopes)}&state=${state}&response_type=code`;
   } else {
     // LinkedIn
