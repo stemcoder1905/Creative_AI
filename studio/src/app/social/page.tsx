@@ -100,7 +100,7 @@ export default function SocialPage() {
   }, [loadData])
 
   const handleConnect = (platform: string) => {
-    window.location.href = `/api/social/oauth/connect?platform=${platform}`
+    window.location.href = `/api/social/oauth/connect?platform=${platform}&_t=${Date.now()}`
   }
 
   const handleDisconnect = async (accountId: string) => {

@@ -7,6 +7,8 @@ import { NextResponse } from 'next/server';
 import crypto from 'crypto';
 import { getSessionUser } from '@/lib/sessionHelper';
 
+export const dynamic = 'force-dynamic';
+
 const REDIRECT_BASE = process.env.OAUTH_REDIRECT_BASE_URL ?? 'http://localhost:3001';
 const CALLBACK_URL = `${REDIRECT_BASE}/api/social/oauth/callback`;
 
