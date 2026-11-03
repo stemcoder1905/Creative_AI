@@ -37,7 +37,7 @@ export async function GET(request: Request) {
       );
     }
     // Pure Facebook Page publishing permissions
-    const scopes = ['pages_show_list', 'pages_manage_posts', 'pages_read_engagement'].join(',');
+    const scopes = ['pages_show_list', 'pages_manage_posts'].join(',');
     authUrl = `https://www.facebook.com/v19.0/dialog/oauth?client_id=${metaAppId}&redirect_uri=${encodeURIComponent(CALLBACK_URL)}&scope=${encodeURIComponent(scopes)}&state=${state}&response_type=code`;
   } else if (platform === 'instagram') {
     const metaAppId = process.env.META_APP_ID;
