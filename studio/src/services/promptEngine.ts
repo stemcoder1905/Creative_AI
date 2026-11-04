@@ -6,7 +6,9 @@ import { DesignBrief, Profile } from '@/types';
  * with explicit rendering of festive elements, typography, and vibrant backgrounds.
  */
 export function buildPrompt(brief: DesignBrief, profile: Profile): string {
-  const brandName = profile.business_name || profile.full_name || '';
+  const currentYear = new Date().getFullYear();
+  const rawBrand = profile.business_name || profile.full_name || '';
+  const brandName = /my\s*space/i.test(rawBrand) ? '' : rawBrand;
   const profession = profile.profession || '';
   const brandPalette = profile.brand_colors ?? profile.brandColors ?? null;
   const colors = brief.colorPalette ||

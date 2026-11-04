@@ -47,10 +47,17 @@ export async function POST(request: Request) {
       designRecord = foundDesign;
       const brief = foundDesign.prompt?.brief || {};
       targetTopic = targetTopic || brief.topic || foundDesign.title;
+      if (targetTopic && /for\s+my\s*space/i.test(targetTopic)) {
+        targetTopic = brief.topic || 'Social Media Creative';
+      }
       targetDesignType = brief.designType || 'Social Post';
       targetHeadline = brief.headline || '';
       targetCta = targetCta || brief.cta || '';
     }
+  }
+
+  if (targetTopic && /for\s+my\s*space/i.test(targetTopic)) {
+    targetTopic = 'Social Media Creative';
   }
 
   if (!targetTopic || typeof targetTopic !== 'string' || !targetTopic.trim()) {
@@ -60,13 +67,16 @@ export async function POST(request: Request) {
     );
   }
 
+  const rawBusinessName = profile?.business_name || profile?.full_name || '';
+  const cleanBusinessName = /my\s*space/i.test(rawBusinessName) ? '' : rawBusinessName;
+
   const copy = await generateSocialCopy({
     topic: targetTopic,
     designType: targetDesignType,
     platform: platform || 'Social Media',
     headline: targetHeadline,
     cta: targetCta,
-    businessName: profile?.business_name || profile?.full_name || '',
+    businessName: cleanBusinessName,
     profession: profile?.profession || '',
     tone: tone || 'engaging, inspiring, and authentic',
   });
