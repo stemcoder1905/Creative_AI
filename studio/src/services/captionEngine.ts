@@ -47,6 +47,9 @@ function sanitizeSocialCopy(result: SocialCopyResult, currentYear = CURRENT_YEAR
       // Strip any "At My Space, " or "from My Space" or "with My Space"
       .replace(/\b(?:at|from|with|by|in)\s+My\s*Space[,.]?\s*/gi, '')
       .replace(/#?My\s*Space\b/gi, '')
+      // Strip fake follow prompts and placeholder handles like @YourHandle / @YourUsername
+      .replace(/follow\s+@(?:yourhandle|yourusername|username|handle)[^.\n]*[.\n]?/gi, '')
+      .replace(/@(?:yourhandle|yourusername|username|handle)\b/gi, '')
       // Replace outdated years 2020-2025 with the current calendar year (e.g. #Diwali2023 -> #Diwali2026)
       .replace(/202[0-5]/g, String(currentYear))
       .replace(/[ \t]{2,}/g, ' ')
@@ -131,6 +134,7 @@ CRITICAL TEMPORAL AWARENESS & DATES:
 
 STRICT BRAND & NAME RESTRICTION:
 - NEVER use, invent, or mention the name "My space", "My Space", or "MySpace" anywhere in titles, captions, or hashtags under any circumstances.
+- NEVER include fake handles like "@YourUsername", "@YourHandle", "@username", or generic "Follow @..." in captions or hashtags. If no exact social handle is given, do not include any @-mention or follow prompt.
 - If no brand name is specified, speak warmly from the community/festival perspective (e.g. "Wishing everyone a sparkling festive season...", "May the warmth of family brighten our lives...").
 
 OUTPUT FORMAT:
