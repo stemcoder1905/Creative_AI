@@ -4,6 +4,7 @@ import { z } from 'zod';
 import { supabase } from '@/lib/supabase';
 import { buildPrompt } from '@/services/promptEngine';
 import { generateImage } from '@/services/imageGeneration';
+import { generateCopyFromBrief } from '@/services/captionEngine';
 import { DesignBrief } from '@/types';
 
 function getSessionUser(request: Request): { email: string; userId: string } | null {
@@ -104,8 +105,27 @@ export async function POST(request: Request) {
   const [width, height] = dimensionsMap[brief.platform] ?? dimensionsMap.custom;
 
   let imageUrl: string;
+  let socialCopy = {
+    title: brief.topic ? `${brief.topic.slice(0, 45)} – ${brief.designType}` : `${brief.designType} Creative`,
+    caption: `✨ ${brief.topic}\n\n${brief.cta || 'Share your thoughts below! 👇'}`,
+    hashtags: '#CreativeAI #SocialMedia #BrandCreative',
+  };
+
   try {
-    imageUrl = await generateImage(promptText, width, height);
+    // Generate image and AI social copy in parallel for maximum speed
+    const [imgRes, copyRes] = await Promise.allSettled([
+      generateImage(promptText, width, height),
+      generateCopyFromBrief(brief, profile),
+    ]);
+
+    if (imgRes.status === 'rejected') {
+      throw imgRes.reason;
+    }
+    imageUrl = imgRes.value;
+
+    if (copyRes.status === 'fulfilled' && copyRes.value) {
+      socialCopy = copyRes.value;
+    }
   } catch (e: any) {
     console.error('[Generate Design Route Error]:', e);
     // Return the EXACT error message directly so user can see what OpenAI reported
@@ -122,12 +142,20 @@ export async function POST(request: Request) {
       .eq('id', creditRecord.id);
   }
 
+  const finalTitle = socialCopy.title || `${brief.topic.slice(0, 45)} – ${brief.designType}`;
+
   const { data: designRecord } = await supabase
     .from('designs')
     .insert({
       profile_id: profile.id,
-      title: `${brief.designType} for ${profile.business_name ?? profile.profession ?? 'Social Media'}`,
-      prompt: { brief, generatedPrompt: promptText },
+      title: finalTitle,
+      prompt: {
+        brief,
+        generatedPrompt: promptText,
+        caption: socialCopy.caption,
+        hashtags: socialCopy.hashtags,
+        title: finalTitle,
+      },
       image_path: imageUrl,
       status: 'completed',
     })
@@ -138,6 +166,9 @@ export async function POST(request: Request) {
     success: true,
     designId: designRecord?.id,
     imageUrl,
+    title: finalTitle,
+    caption: socialCopy.caption,
+    hashtags: socialCopy.hashtags,
     prompt: promptText,
     creditsRemaining: remaining - COST_PER_GEN,
   });

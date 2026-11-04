@@ -92,9 +92,14 @@ export default function DesignsVaultPage() {
                 </div>
                 <div className="p-4 flex-1 flex flex-col justify-between">
                   <div>
-                    <h4 className="font-semibold text-sm text-white line-clamp-1">{design.title}</h4>
-                    <p className="text-xs text-slate-400 mt-1 line-clamp-2">
-                      {design.prompt?.brief?.topic || 'AI Creative'}
+                    <h4 className="font-semibold text-sm text-white line-clamp-1">
+                      {design.prompt?.title ||
+                        (design.title && !design.title.toLowerCase().includes('for my space')
+                          ? design.title
+                          : (design.prompt?.brief?.topic || design.title))}
+                    </h4>
+                    <p className="text-xs text-slate-400 mt-1 line-clamp-2 leading-relaxed">
+                      {design.prompt?.caption || design.prompt?.brief?.topic || 'AI Creative'}
                     </p>
                   </div>
                   <div className="pt-3 mt-3 border-t border-slate-800/80 flex items-center justify-between">

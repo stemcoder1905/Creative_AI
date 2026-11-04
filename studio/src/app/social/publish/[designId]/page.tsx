@@ -5,7 +5,8 @@ import { useRouter, useParams } from 'next/navigation'
 import Link from 'next/link'
 import {
   ArrowLeft, Send, Calendar, Clock, Facebook,
-  Instagram, Linkedin, CheckCircle2, XCircle, Hash, AlignLeft, Share2
+  Instagram, Linkedin, CheckCircle2, XCircle, Hash, AlignLeft, Share2,
+  Sparkles, Wand2, RefreshCw
 } from 'lucide-react'
 
 type SocialAccount = {
@@ -27,6 +28,14 @@ const PLATFORM_COLORS: Record<string, string> = {
   linkedin: 'bg-sky-700',
 }
 
+const TONES = [
+  { label: 'Engaging', value: 'engaging and conversational' },
+  { label: 'Festive', value: 'warm, joyful, and festive' },
+  { label: 'Promotional', value: 'high-converting, persuasive, and promotional' },
+  { label: 'Inspirational', value: 'deep, uplifting, and motivational' },
+  { label: 'Short & Punchy', value: 'short, punchy, and modern' },
+]
+
 export default function PublishDesignPage() {
   const params = useParams()
   const router = useRouter()
@@ -42,8 +51,51 @@ export default function PublishDesignPage() {
   const [timezone, setTimezone] = useState(Intl.DateTimeFormat().resolvedOptions().timeZone)
   const [loading, setLoading] = useState(true)
   const [submitting, setSubmitting] = useState(false)
+  const [generatingCaption, setGeneratingCaption] = useState(false)
+  const [selectedTone, setSelectedTone] = useState('Engaging')
   const [error, setError] = useState<string | null>(null)
   const [success, setSuccess] = useState(false)
+
+  // AI Caption generation function
+  const triggerAiCaption = async (targetDesign?: any, toneLabel = selectedTone) => {
+    const d = targetDesign || design
+    if (!d) return
+    const brief = d.prompt?.brief || {}
+    const topic = brief.topic || d.title || ''
+    if (!topic) return
+
+    setGeneratingCaption(true)
+    setError(null)
+
+    try {
+      const toneObj = TONES.find((t) => t.label === toneLabel)
+      const res = await fetch('/api/design/generate-caption', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          designId: d.id,
+          topic,
+          tone: toneObj?.value || 'engaging and authentic',
+          designType: brief.designType,
+          headline: brief.headline,
+          cta: brief.cta,
+        }),
+      })
+
+      if (res.ok) {
+        const data = await res.json()
+        if (data.caption) setCaption(data.caption)
+        if (data.hashtags) setHashtags(data.hashtags)
+      } else {
+        const errData = await res.json().catch(() => ({}))
+        console.warn('AI Caption endpoint warning:', errData)
+      }
+    } catch (e) {
+      console.error('Failed to trigger AI caption:', e)
+    } finally {
+      setGeneratingCaption(false)
+    }
+  }
 
   // Load design info + connected accounts
   useEffect(() => {
@@ -57,8 +109,22 @@ export default function PublishDesignPage() {
           const data = await desRes.json()
           const found = (data.designs ?? []).find((d: any) => d.id === designId)
           setDesign(found ?? null)
-          if (found?.prompt?.brief?.topic) {
-            setCaption(`${found.title ?? 'Check out our latest design!'}\n\nCreated with CreativeAI Studio 🎨`)
+
+          if (found) {
+            const savedCaption = found.prompt?.caption || found.caption
+            const savedHashtags = found.prompt?.hashtags || found.hashtags
+
+            if (savedCaption) {
+              setCaption(savedCaption)
+            }
+            if (savedHashtags) {
+              setHashtags(savedHashtags)
+            }
+
+            // If no caption is saved yet, automatically generate an intelligent AI caption
+            if (!savedCaption && (found.prompt?.brief?.topic || found.title)) {
+              triggerAiCaption(found, 'Engaging')
+            }
           }
         }
         if (accRes.ok) {
@@ -87,7 +153,6 @@ export default function PublishDesignPage() {
     }
     if (!design?.image_url && !design?.image_path) {
       setError('Design image not found.')
-      return
     }
     if (publishMode === 'schedule' && !scheduledAt) {
       setError('Please select a scheduled date and time.')
@@ -125,7 +190,7 @@ export default function PublishDesignPage() {
   if (loading) {
     return (
       <div className="min-h-screen bg-slate-950 flex items-center justify-center text-slate-400">
-        Loading...
+        Loading design details...
       </div>
     )
   }
@@ -154,8 +219,8 @@ export default function PublishDesignPage() {
           </h2>
           <p className="text-slate-400 text-sm mb-6">
             {publishMode === 'now'
-              ? 'Your design is being published to the selected social accounts.'
-              : `Your design will be published at ${new Date(scheduledAt).toLocaleString()}`}
+              ? 'Your design and AI-crafted caption are being published to the selected social accounts.'
+              : `Your design will be automatically published at ${new Date(scheduledAt).toLocaleString()}`}
           </p>
           <div className="flex items-center justify-center gap-3">
             <Link href="/social" className="px-5 py-2.5 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl text-sm font-semibold transition">
@@ -248,18 +313,59 @@ export default function PublishDesignPage() {
 
             {/* Right: Caption + Options */}
             <div className="space-y-6">
-              {/* Caption */}
+              {/* Caption Header with AI Generator */}
               <div>
-                <label className="text-sm font-semibold text-slate-300 flex items-center gap-1.5 mb-2">
-                  <AlignLeft className="w-4 h-4" /> Caption
-                </label>
+                <div className="flex items-center justify-between mb-2">
+                  <label className="text-sm font-semibold text-slate-300 flex items-center gap-1.5">
+                    <AlignLeft className="w-4 h-4 text-indigo-400" /> Post Caption
+                  </label>
+                  <button
+                    type="button"
+                    onClick={() => triggerAiCaption(undefined, selectedTone)}
+                    disabled={generatingCaption}
+                    className="inline-flex items-center gap-1.5 px-3 py-1 bg-indigo-600/20 hover:bg-indigo-600/40 border border-indigo-500/40 text-indigo-300 rounded-lg text-xs font-medium transition disabled:opacity-50"
+                  >
+                    {generatingCaption ? (
+                      <RefreshCw className="w-3.5 h-3.5 animate-spin text-indigo-400" />
+                    ) : (
+                      <Sparkles className="w-3.5 h-3.5 text-indigo-400" />
+                    )}
+                    {generatingCaption ? 'Generating...' : '✨ Re-craft with AI'}
+                  </button>
+                </div>
+
+                {/* Tone Selectors */}
+                <div className="flex items-center gap-1.5 overflow-x-auto pb-2 mb-2 no-scrollbar">
+                  <span className="text-[11px] text-slate-500 flex items-center gap-1 mr-1 flex-shrink-0">
+                    <Wand2 className="w-3 h-3 text-indigo-400" /> Tone:
+                  </span>
+                  {TONES.map((t) => (
+                    <button
+                      type="button"
+                      key={t.label}
+                      onClick={() => {
+                        setSelectedTone(t.label)
+                        triggerAiCaption(undefined, t.label)
+                      }}
+                      disabled={generatingCaption}
+                      className={`px-2.5 py-1 rounded-full text-xs font-medium border transition flex-shrink-0 ${
+                        selectedTone === t.label
+                          ? 'bg-indigo-600 text-white border-indigo-500 shadow-sm'
+                          : 'bg-slate-900 text-slate-400 border-slate-800 hover:border-slate-700 hover:text-slate-200'
+                      }`}
+                    >
+                      {t.label}
+                    </button>
+                  ))}
+                </div>
+
                 <textarea
                   value={caption}
                   onChange={(e) => setCaption(e.target.value)}
-                  rows={5}
+                  rows={6}
                   maxLength={2200}
-                  placeholder="Write your post caption..."
-                  className="w-full bg-slate-900 border border-slate-700 rounded-xl px-4 py-3 text-sm text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-indigo-500 resize-none"
+                  placeholder="AI-crafted caption will appear here..."
+                  className="w-full bg-slate-900 border border-slate-700 rounded-xl px-4 py-3 text-sm text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-indigo-500 resize-none leading-relaxed"
                 />
                 <p className="text-xs text-slate-500 mt-1 text-right">{caption.length}/2200</p>
               </div>
@@ -267,13 +373,13 @@ export default function PublishDesignPage() {
               {/* Hashtags */}
               <div>
                 <label className="text-sm font-semibold text-slate-300 flex items-center gap-1.5 mb-2">
-                  <Hash className="w-4 h-4" /> Hashtags
+                  <Hash className="w-4 h-4 text-purple-400" /> Hashtags
                 </label>
                 <input
                   type="text"
                   value={hashtags}
                   onChange={(e) => setHashtags(e.target.value)}
-                  placeholder="#marketing #design #socialmedia"
+                  placeholder="#topic #trending #creative"
                   className="w-full bg-slate-900 border border-slate-700 rounded-xl px-4 py-2.5 text-sm text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-indigo-500"
                 />
               </div>
