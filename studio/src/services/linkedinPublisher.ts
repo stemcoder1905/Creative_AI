@@ -21,10 +21,17 @@ export async function publishToLinkedIn(
   // Step 1: Register image upload
   const { asset, uploadUrl } = await registerLinkedInImage(accessToken, authorUrn);
 
-  // Step 2: Fetch the image from our URL and upload to LinkedIn
-  const imageRes = await fetch(imageUrl);
-  if (!imageRes.ok) throw new Error(`Failed to fetch image for LinkedIn: ${imageRes.status}`);
-  const imageBuffer = await imageRes.arrayBuffer();
+  // Step 2: Get image buffer (handles both public URLs and data URIs)
+  let imageBuffer: Buffer | ArrayBuffer;
+  if (imageUrl.startsWith('data:')) {
+    const matches = imageUrl.match(/^data:[^;]+;base64,(.+)$/);
+    if (!matches) throw new Error('Invalid data URI format for image');
+    imageBuffer = Buffer.from(matches[1], 'base64');
+  } else {
+    const imageRes = await fetch(imageUrl);
+    if (!imageRes.ok) throw new Error(`Failed to fetch image for LinkedIn: ${imageRes.status}`);
+    imageBuffer = await imageRes.arrayBuffer();
+  }
 
   const uploadRes = await fetch(uploadUrl, {
     method: 'PUT',

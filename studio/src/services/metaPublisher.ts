@@ -14,6 +14,7 @@ export interface MetaPublishResult {
 
 // ──────────────────────────────────────────────────────────────
 // Facebook Page: publish an image with caption
+// Supports both public http(s) URLs and inline base64 data URIs
 // ──────────────────────────────────────────────────────────────
 export async function publishToFacebookPage(
   pageId: string,
@@ -21,18 +22,45 @@ export async function publishToFacebookPage(
   imageUrl: string,
   caption: string
 ): Promise<MetaPublishResult> {
-  // POST /{page-id}/photos — uploads + publishes image in one call
   const url = `${META_BASE}/${pageId}/photos`;
-  const res = await fetch(url, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      url: imageUrl,
-      caption,
-      published: true,
-      access_token: pageAccessToken,
-    }),
-  });
+
+  let res: Response;
+
+  if (imageUrl.startsWith('data:')) {
+    // Extract base64 payload and MIME type
+    const matches = imageUrl.match(/^data:([^;]+);base64,(.+)$/);
+    if (!matches) {
+      throw new Error('Invalid data URI format for image');
+    }
+    const mimeType = matches[1] || 'image/png';
+    const base64Data = matches[2];
+    const buffer = Buffer.from(base64Data, 'base64');
+    const blob = new Blob([buffer], { type: mimeType });
+
+    const formData = new FormData();
+    formData.append('source', blob, 'design.png');
+    formData.append('caption', caption);
+    formData.append('published', 'true');
+    formData.append('access_token', pageAccessToken);
+
+    res = await fetch(url, {
+      method: 'POST',
+      body: formData,
+    });
+  } else {
+    // Public http/https URL
+    res = await fetch(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        url: imageUrl,
+        caption,
+        published: true,
+        access_token: pageAccessToken,
+      }),
+    });
+  }
+
   const data = await res.json();
   if (!res.ok || data.error) {
     throw new Error(
