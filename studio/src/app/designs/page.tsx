@@ -9,20 +9,26 @@ export default function DesignsVaultPage() {
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
+    let isMounted = true
     async function load() {
       try {
         const res = await fetch('/api/designs')
         if (res.ok) {
           const data = await res.json()
-          setDesigns(data.designs || [])
+          if (isMounted) {
+            setDesigns(data.designs || [])
+          }
         }
       } catch (e) {
         console.error('Error fetching designs', e)
       } finally {
-        setLoading(false)
+        if (isMounted) setLoading(false)
       }
     }
     load()
+    return () => {
+      isMounted = false
+    }
   }, [])
 
   return (
@@ -55,8 +61,23 @@ export default function DesignsVaultPage() {
 
       <main className="max-w-7xl w-full mx-auto p-6 sm:p-10 flex-1">
         {loading ? (
-          <div className="p-16 text-center text-slate-500 bg-slate-900/40 rounded-2xl border border-slate-800">
-            Loading your design gallery...
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
+            {[1, 2, 3, 4, 5, 6, 7, 8].map((i) => (
+              <div
+                key={i}
+                className="bg-slate-900 border border-slate-800 rounded-2xl overflow-hidden animate-pulse flex flex-col"
+              >
+                <div className="aspect-square bg-slate-800/60" />
+                <div className="p-4 space-y-3">
+                  <div className="h-4 bg-slate-800 rounded w-3/4" />
+                  <div className="h-3 bg-slate-800/60 rounded w-full" />
+                  <div className="pt-2 border-t border-slate-800/80 flex justify-between items-center">
+                    <div className="h-3 bg-slate-800/40 rounded w-16" />
+                    <div className="h-4 bg-slate-800/60 rounded w-20" />
+                  </div>
+                </div>
+              </div>
+            ))}
           </div>
         ) : designs.length === 0 ? (
           <div className="bg-slate-900 border border-slate-800 rounded-2xl p-12 text-center space-y-4">
@@ -87,6 +108,8 @@ export default function DesignsVaultPage() {
                   <img
                     src={design.image_path}
                     alt={design.title || 'Creative'}
+                    loading="lazy"
+                    decoding="async"
                     className="w-full h-full object-cover group-hover:scale-105 transition duration-300"
                   />
                 </div>
@@ -103,27 +126,27 @@ export default function DesignsVaultPage() {
                     </p>
                   </div>
                   <div className="pt-3 mt-3 border-t border-slate-800/80 flex items-center justify-between">
-                      <span className="text-[11px] text-slate-500">
-                        {new Date(design.created_at).toLocaleDateString()}
-                      </span>
-                      <div className="flex items-center gap-2">
-                        <Link
-                          href={`/social/publish/${design.id}`}
-                          className="inline-flex items-center gap-1 text-xs text-indigo-400 hover:text-indigo-300 font-medium"
-                        >
-                          <Share2 className="w-3.5 h-3.5" /> Publish
-                        </Link>
-                        <a
-                          href={design.image_path}
-                          download={`creative_${design.id}.png`}
-                          target="_blank"
-                          rel="noreferrer"
-                          className="inline-flex items-center gap-1 text-xs text-slate-400 hover:text-slate-300 font-medium"
-                        >
-                          <Download className="w-3.5 h-3.5" /> Download
-                        </a>
-                      </div>
+                    <span className="text-[11px] text-slate-500">
+                      {new Date(design.created_at).toLocaleDateString()}
+                    </span>
+                    <div className="flex items-center gap-2">
+                      <Link
+                        href={`/social/publish/${design.id}`}
+                        className="inline-flex items-center gap-1 text-xs text-indigo-400 hover:text-indigo-300 font-medium"
+                      >
+                        <Share2 className="w-3.5 h-3.5" /> Publish
+                      </Link>
+                      <a
+                        href={design.image_path}
+                        download={`creative_${design.id}.png`}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="inline-flex items-center gap-1 text-xs text-slate-400 hover:text-slate-300 font-medium"
+                      >
+                        <Download className="w-3.5 h-3.5" /> Download
+                      </a>
                     </div>
+                  </div>
                 </div>
               </div>
             ))}

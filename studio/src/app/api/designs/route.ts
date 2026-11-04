@@ -1,18 +1,9 @@
 // src/app/api/designs/route.ts
 import { NextResponse } from 'next/server';
 import { supabase } from '@/lib/supabase';
+import { getSessionUser } from '@/lib/sessionHelper';
 
-function getSessionUser(request: Request): { email: string; userId: string } | null {
-  const cookie = request.headers.get('cookie') ?? '';
-  const match = cookie.match(/sb-access-token=([^;]+)/);
-  if (!match) return null;
-  try {
-    const raw = Buffer.from(decodeURIComponent(match[1]), 'base64').toString('utf-8');
-    return JSON.parse(raw);
-  } catch {
-    return null;
-  }
-}
+export const dynamic = 'force-dynamic';
 
 export async function GET(request: Request) {
   const session = getSessionUser(request);
@@ -33,7 +24,7 @@ export async function GET(request: Request) {
 
   const { data: designs, error } = await supabase
     .from('designs')
-    .select('*')
+    .select('id, title, image_path, prompt, status, created_at')
     .eq('profile_id', profile.id)
     .order('created_at', { ascending: false });
 
@@ -41,5 +32,12 @@ export async function GET(request: Request) {
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 
-  return NextResponse.json({ designs: designs || [] });
+  return NextResponse.json(
+    { designs: designs || [] },
+    {
+      headers: {
+        'Cache-Control': 'private, no-cache, must-revalidate',
+      },
+    }
+  );
 }
